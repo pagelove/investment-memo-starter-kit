@@ -1,0 +1,14 @@
+{
+  "name": "my-pagelove-app",
+  "version": "1.0.0",
+  "description": "A Pagelove application",
+  "entry": "index.html",
+  "port": 5683,
+  "build": {
+    "webroot": "docs",
+    "publicPath": "/"
+  },
+  "routes": [],
+  "middleware": [],
+  "environment": {}
+}
