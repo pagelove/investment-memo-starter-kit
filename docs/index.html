@@ -4,8 +4,20 @@
     <title>Welcome to Pagelove</title>
     <link rel="stylesheet" href="https://pagelove.org/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+        #last-request {
+            display: block;
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+        }
+        
+        #last-request.visible {
+            opacity: 1;
+        }
+    </style>
     <script type="module" src="https://pagelove.org/js/dom-primitives/index.mjs"></script>
     <script type="module" src="https://pagelove.org/js/runkit/index.mjs"></script>
+    <script type="module" src="https://jamesaduncan.github.io/selector-subscriber/index.mjs"></script>
     <script type="module" src="./js/index.mjs"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/http.min.js"></script>
@@ -25,48 +37,49 @@
             </p>
             <p>
                 Because we have come to think of the web as an application delivery mechanism, the amount of
-                tooling, frameworks, and libraries that are needed to just get started with anything is truly
-                staggering. With the rise of node.js APIs and single page applications, we have moved away
-                from the foundational ideas of the web, to a world where the web is just a big dumb pipe.
+                tooling, frameworks, and libraries are needed to get started with anything is truly
+                staggering. The rise of node.js APIs and single page applications, has moved us away
+                from the foundational ideas of the web, into a world where the web is just a big dumb pipe.
             </p>
             <p>
                 Pagelove enables surgical DOM manipulations using standard HTTP and HTML. This makes for
                 much simpler applications, that don't require complex state management in the client.
             </p>
             <p>
-                But radically simpler applications aren't a business. The business of pagelove comes
-                when you realize that because pagelove is just HTML and HTTP, it lives at the edge.
+                Go ahead, try it, edit the paragraph:
+            </p>
+            <p id="editable" contenteditable="plaintext-only">
+                Make whatever change you'd like.<br></p>
+            <p id="last-request">
+                You can see from the HTTP message, just how simple it can be to edit a document on the web, with
+                surgical precision:
+                <network-last-request></network-last-request>
+            </p>
+        </section>
+        <section>
+            <h2>The business</h2>
+            <p>
+                But radically simpler applications aren't a business. The business of pagelove is 
+                living at the edge. Because Pagelove doesn't need complex containers or serverless functions,
+                it can be operated far less expensively than existing edge computing solutions. 
             </p>
             <p>
                 <strong>
                     In a world of AI created software, where it is infinitely inexpensive
-                    to develop, its operational cost will become the only thing that matters.
+                    to build, the only thing that matters will be its operational cost.
                 </strong>
             </p>
-            <p>
-                Because Pagelove doesn't need complex containers or serverless functions, it can be
-                operated far more cheaply that existing edge computing solutions. Which means it's
-                future of edge computing. Which means it's the future of the web.
-            </p>            
-            <p>
-                If pagelove is the future of web applications.
+            <p>                
+                Pagelove is the future of edge computing,  and the Pagelove Platform will be 
+                where applications run.
             </p>
-            <p>
-                The Pagelove Platform should be where they run.
-            </p>
-        </section>
-        <section id="editable" contenteditable="">
-            <p>The power of pagelove is to surgically alter pages.</p>
         </section>
         <section>
             <p>
                 After you've made some changes, you'll see the network inspector update
                 with the request that goes to the server, and makes the changes persistent.            
             </p>
-            <p>
-                Your request looked like this:
-                <network-last-request></network-last-request>
-            </p>
+
             <p>
                 No complex API call, no scaffolding needed. Just HTTP. Just HTML.
             </p>
@@ -75,18 +88,79 @@
             </p>
         </section>
     </main>
-    <network-inspector></network-inspector>
-    <script>        
+    <script type="module">
+        import { SelectorSubscriber } from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
         document.addEventListener("DASAvailable", async () => {
-            const editable = document.querySelector('[contenteditable]');
+            
             let debounceTimer;
             
-            editable.addEventListener('blur', async() => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(async () => {
-                    await editable.PUT();
-                }, 300);
-            });
+            // Helper to save cursor position
+            function saveSelection() {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    return selection.getRangeAt(0);
+                }
+                return null;
+            }
+            
+            // Helper to restore cursor position
+            function restoreSelection(range) {
+                if (range) {
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            }
+            SelectorSubscriber.subscribe('[contenteditable]', async (editable) => {
+                // Initialize originalContent with the current content of the editable element
+                let originalContent = editable.textContent;
+                
+                editable.addEventListener('input', async() => {
+                    clearTimeout(debounceTimer);
+                    const currentContent = editable.textContent;
+                    
+                    if (currentContent !== originalContent) {
+                        debounceTimer = setTimeout(async () => {
+                            // Get fresh content at save time, not when timeout was set
+                            const latestContent = editable.textContent;
+                            
+                            // Save cursor position before PUT
+                            const savedRange = saveSelection();
+                            const hadFocus = document.activeElement === editable;
+                            
+                            const response = await editable.PUT();
+                            if (response.ok) {
+                                document.getElementById('last-request').classList.add('visible');
+                                // Update originalContent with the actual saved content
+                                originalContent = latestContent;
+                            }
+                            
+                            // Restore focus and cursor after a brief delay to let DOM settle
+                            if (hadFocus) {
+                                setTimeout(() => {
+                                    editable.focus();
+                                    restoreSelection(savedRange);
+                                }, 0);
+                            }
+                        }, 1500); // Triggers after 1.5 seconds of inactivity
+                    }
+                });
+                
+                // Still handle blur to ensure save on navigation
+                editable.addEventListener('blur', async() => {
+                    clearTimeout(debounceTimer);
+                    const currentContent = editable.textContent;
+                    
+                    if (currentContent !== originalContent) {
+                        const response = await editable.PUT();
+                        if (response.ok) {
+                            document.getElementById('last-request').classList.add('visible');
+                        }
+                        originalContent = currentContent;
+                    }
+                });
+
+            })
         });
     </script>
 </body></html>
