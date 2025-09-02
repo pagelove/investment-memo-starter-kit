@@ -1,1 +1,61 @@
-<h1>Hello, World.</h1>
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Pagelove</title>
+    <link rel="stylesheet" href="https://pagelove.org/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script type="module" src="https://pagelove.org/js/dom-primitives/index.mjs"></script>
+    <script type="module" src="https://pagelove.org/js/runkit/index.mjs"></script>
+    <script type="module" src="./js/index.mjs"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/http.min.js"></script>
+  </head>
+  <body>
+    <!-- Hero Section with ID for selector targeting -->
+    <header class="fixed-header">
+      <h1 class="header-title">Pagelove</h1>
+    </header>
+
+    <!-- Main Content Area -->
+    <main>
+        <section>
+            <h1>Pagelove - what it's all about</h1>
+            <p>
+                Some text goes here. It should probably be about investing in pagelove.                
+            </p>
+        </section>
+        <section id="editable" contenteditable="">
+            <p>The power of pagelove is to surgically alter pages. Should work....</p><p>Let's give it a go!</p>
+        </section>
+        <section>
+            <p>
+                After you've made some changes, you'll see the network inspector update
+                with the request that goes to the server, and makes the changes persistent.            
+            </p>
+            <p>
+                Your request looked like this:
+                <network-last-request></network-last-request>
+            </p>
+            <p>
+                No complex API call, no scaffolding needed. Just HTTP. Just HTML.
+            </p>
+            <p>
+                Just the Web.
+            </p>
+        </section>
+    </main>
+    <network-inspector></network-inspector>
+    <script>        
+        document.addEventListener("DASAvailable", async () => {
+            const editable = document.querySelector('[contenteditable]');
+            let debounceTimer;
+            
+            editable.addEventListener('blur', async() => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(async () => {
+                    await editable.PUT();
+                }, 300);
+            });
+        });
+    </script>
+</body></html>
